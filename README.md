@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="CLVs.jl" width="760">
+</p>
+
 # CLVs.jl
 
 CLVs.jl computes the covariant Lyapunov vectors (CLVs) of a trajectory of a dynamical system,
@@ -729,7 +733,12 @@ julia --project=examples examples/make_diagrams.jl
 julia --project=examples examples/make_figures.jl
 ```
 
-Each script takes about a minute, most of it to load CairoMakie.
+Each script takes about a minute, most of it to load CairoMakie. The logo is drawn by
+`assets/make_logo.jl`, run with `julia assets/make_logo.jl`. Its portrait of Aleksandr Lyapunov,
+`assets/lyapunov.png`, is a photograph in the public domain with the background removed. It was
+published in 1908 by I. P. Osipov and D. I. Bagalei in the history of the Faculty of Physics and
+Mathematics of the University of Kharkiv, and is taken from
+[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Aleksandr_Lyapunov.jpg).
 
 
 ## References
