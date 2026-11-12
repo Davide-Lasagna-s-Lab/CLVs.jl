@@ -1,6 +1,6 @@
 name = "CLVs"
 uuid = "dd4c6625-efea-4f92-b63a-256f504358b6"
-authors = ["Davide Lasagna"]
+authors = ["Davide Lasagna <davide.lasagna@soton.ac.uk>"]
 version = "0.1.0"
 
 [deps]
