@@ -53,6 +53,15 @@ function computeCLV(flow_nl, flow_tan, flow_adj, x::X, randx,
     @time flow_nl(x, (tB, tC), reset!(storage)); flush(stdout)
     @time flow_tan(ψ⁻, storage, (tB, tC), mon_tan_cp); flush(stdout)
 
+    # The tangent samples are counted from the start of the window and the
+    # adjoint ones from its end. They fall on the same times only if the
+    # window is a whole number of sampling intervals, that is if the tangent
+    # samples are evenly spaced up to the last one.
+    ts = times(mon_tan_cp)
+    isapprox(ts[end] - ts[end-1], ts[2] - ts[1]; rtol=1e-6) ||
+        throw(ArgumentError("T must be a whole number of sampling intervals, " *
+                            "that is of `oneevery` time steps"))
+
     ################ 
     # BACKWARD 
     ################ 
