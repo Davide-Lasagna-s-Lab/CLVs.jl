@@ -124,7 +124,7 @@ function _process(ψ⁺s::AbstractVector{Coupled{N, T}},
         # construct linear combination of backwards lyapunov vectors
         Γ = similar(ψ⁻s[1])
         for j in 1:N
-            Γ[j] .*= 0
+            Γ[j] .= 0
             for k in 1:N
                 Γ[j] .+= ψ⁻s[i][k] .* A⁻[k, j]
             end
