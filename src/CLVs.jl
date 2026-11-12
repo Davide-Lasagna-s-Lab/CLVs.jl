@@ -126,7 +126,7 @@ function _process(ψ⁺s::AbstractVector{Coupled{N, T}},
         for j in 1:N
             Γ[j] .*= 0
             for k in 1:N
-                Γ[j] .+= ψ⁺s[i][k] .* A⁻[k, j]
+                Γ[j] .+= ψ⁻s[i][k] .* A⁻[k, j]
             end
             Γ[j] ./= norm(Γ[j])
         end
