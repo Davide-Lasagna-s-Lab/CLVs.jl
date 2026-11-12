@@ -59,6 +59,17 @@ the CLVs, since $Y(t, s) f(u(s)) = f(u(t))$, and on a chaotic attractor its expo
 first $j$ vectors span the $j$ directions that grow fastest forward in time, and the vectors from
 the $j$-th to the last span the perturbations that grow no faster than $e^{\lambda_j t}$.
 
+<p align="center">
+  <img src="assets/covariance.png" alt="The propagator maps the three covariant Lyapunov vectors at one time onto multiples of those at a later time" width="820">
+</p>
+
+The figure shows the three CLVs of a trajectory at two times. The propagator maps each vector at
+time $s$ onto a multiple of the vector with the same index at time $t$. Here it stretches the first,
+shortens the third, and leaves the second, the direction of the flow, along the trajectory. A cell
+of perturbations with its sides along the first and the third CLV, in grey, is mapped onto a cell
+with its sides along the same two CLVs at the later time, longer and thinner. In all the figures of
+this manual the first, second and third vector of a family are orange, green and blue.
+
 
 ## Adjoint covariant Lyapunov vectors
 
@@ -117,6 +128,21 @@ Third, unlike the CLVs, the adjoint CLVs depend on the inner product. If
 $\langle u, v \rangle = (u, W v)$, with $(\cdot, \cdot)$ the Euclidean product and $W$ symmetric
 positive definite, they are $W^{-1}$ times those of the Euclidean product.
 
+<p align="center">
+  <img src="assets/duality.png" alt="Two covariant Lyapunov vectors of the plane and their adjoints, and the components of a perturbation on the two vectors" width="820">
+</p>
+
+The figure shows the two bases in the plane. The CLVs are drawn with solid lines and their adjoints
+with dashed lines, as are the tangent and the adjoint vectors in all the figures. In panel (a),
+$\theta_1$ is normal to $\gamma_2$ and $\theta_2$ to $\gamma_1$. The length of each adjoint is such
+that the foot of the normal from its tip to its own CLV is the tip of that CLV, along the dotted
+lines, which is the condition $\langle \theta_i, \gamma_i \rangle = 1$. The adjoint is therefore
+longer than its CLV, the more so the smaller the angle between the two CLVs. In panel (b), a
+perturbation $y$ is the sum of its components along the two CLVs. The lines of constant
+$\langle \theta_1, y \rangle$ are parallel to $\gamma_2$, so that this inner product is the
+coordinate of $y$ along $\gamma_1$ in the oblique grid of the CLVs, and likewise for
+$\langle \theta_2, y \rangle$.
+
 
 ## The two sets of Gram–Schmidt vectors
 
@@ -146,6 +172,17 @@ time are those along $\theta_1, \theta_2, \dots$, in this order, and the same ar
 \qquad j = 1, \dots, N.
 ```
 
+<p align="center">
+  <img src="assets/directions.png" alt="On the circle of the directions, tangent vectors turn to the first covariant Lyapunov vector forward in time, and adjoint vectors to its adjoint backward in time" width="820">
+</p>
+
+The figure shows the two convergences for a system of the plane with a constant Jacobian, on the
+circle of the directions. In panel (a), forward in time, every tangent vector that is not along
+$\gamma_2$ turns to $\gamma_1$, as the grey vector $\psi_1^-$ does, drawn at four times from light
+to dark. In panel (b), backward in time, every adjoint vector that is not along $\theta_2$ turns to
+$\theta_1$, which is normal to $\gamma_2$. The first vector of the tangent set gives $\gamma_1$, and
+the normal to the first vector of the adjoint set gives $\gamma_2$.
+
 The adjoint Gram–Schmidt vectors are to the adjoint CLVs what the tangent ones are to the CLVs. The
 vector $\gamma_j$ lies in the span of $\psi_1^-, \dots, \psi_j^-$ and is orthogonal to
 $\psi_1^+, \dots, \psi_{j-1}^+$, and the vector $\theta_j$ lies in the span of
@@ -153,6 +190,16 @@ $\psi_1^+, \dots, \psi_j^+$ and is orthogonal to $\psi_1^-, \dots, \psi_{j-1}^-$
 conditions leaves one direction. The CLVs were obtained from these intersections by Wolfe and
 Samelson (2007), and by Ginelli et al. (2007) with an iteration backward in time that needs the
 tangent set only. The second set is needed here because it also gives the adjoint CLVs.
+
+<p align="center">
+  <img src="assets/subspaces.png" alt="In three dimensions, the second covariant Lyapunov vector and its adjoint are each the intersection of two planes given by the Gram–Schmidt vectors" width="820">
+</p>
+
+The figure shows the two intersections for the second vector of each family in three dimensions. In
+panel (a), $\gamma_2$ lies in the plane of $\psi_1^-$ and $\psi_2^-$, which is that of $\gamma_1$
+and $\gamma_2$, and in the plane normal to $\psi_1^+$, which is that of $\gamma_2$ and $\gamma_3$.
+In panel (b), with the two sets exchanged, $\theta_2$ lies in the plane of $\psi_1^+$ and $\psi_2^+$
+and in the plane normal to $\psi_1^-$. The vectors of the two panels are dual to each other.
 
 
 ## The LU factorisation
@@ -191,6 +238,16 @@ The columns of $\tilde\Gamma$ and $\tilde\Theta$ are the CLVs and the adjoint CL
 length, and they are dual as they stand. The factorisation does not pivot, because the order of the
 nested subspaces carries the information.
 
+<p align="center">
+  <img src="assets/factorisation.png" alt="Shapes of the matrices of the factorisation and of the two triangular combinations, for three vectors" width="820">
+</p>
+
+The figure shows the shapes of the matrices for $N = 3$. The matrices of the vectors have $n$ rows,
+one for each component of the state, and the factors are of size $N$. The column $j$ of $U^{-1}$ and
+of $L^{-\top}$ holds the coefficients of the vector $j$ on the first $j$ vectors of its set. The
+diagonal of $L^{-\top}$ is made of ones, so that $\tilde\theta_j$ is $\psi_j^+$ plus a combination
+of the vectors before it.
+
 The factorisation exists if the leading blocks of $P$ are non-singular. The block of size $j$ is
 singular only if a non-zero combination of $\gamma_1, \dots, \gamma_j$ is orthogonal to
 $\theta_1, \dots, \theta_j$, which the duality excludes. A small pivot $U_{jj}$ signals a near
@@ -225,6 +282,15 @@ vanishes at a tangency. It is a measure of transversality that needs only the fi
 each set, while the angles between pairs of CLVs need the vectors of both. For the first vector it
 is $c_1 = \lvert \langle \psi_1^+, \psi_1^- \rangle \rvert$.
 
+<p align="center">
+  <img src="assets/transversality.png" alt="The adjoint vector grows as the first covariant Lyapunov vector approaches the span of the others" width="820">
+</p>
+
+The figure shows $\gamma_1$ at three angles to the span of the other CLVs, the line of $\gamma_2$ in
+the plane. The transversality $c_1$ is the distance of the tip of $\gamma_1$ from this span, and
+$\theta_1$, normal to the span, has length $1/c_1$. As $\gamma_1$ approaches the span, $c_1$
+vanishes and $\theta_1$ grows without bound.
+
 
 ## The algorithm
 
@@ -232,12 +298,14 @@ The calculation is organised around a window $[t_B, t_C]$ of length $T$, on whic
 wanted, with a spin-up of length $t_{\mathrm{spin}}$ before it for the tangent set and one after it
 for the adjoint set.
 
-```
- time       0              tspin             tspin + T          2 tspin + T
-            ├─── spin-up ────┼───── window ──────┼───── spin-up ─────┤
- tangent    ψ⁻ random ──────▶ sampled ──────────▶
- adjoint                     ◀────────── sampled ◀──────────── ψ⁺ random
-```
+<p align="center">
+  <img src="assets/algorithm.png" alt="The two sweeps of the algorithm along the trajectory: the tangent set forward, the adjoint set backward, and their combination over the window" width="820">
+</p>
+
+The numbers in the figure are those of the six steps below. The trajectory is in grey, in the chunks
+in which it is integrated, with a circle for each checkpoint. The tangent set is marched forward and
+the adjoint set backward, and their samples over the window, the discs and the rings, are combined
+at each time.
 
 1. **Forward spin-up.** From the state `x` at time zero, the trajectory is integrated to
    $t_B = t_{\mathrm{spin}}$ in `Nsplits` chunks. The trajectory of each chunk is stored at every
@@ -439,6 +507,14 @@ julia> [dot(Θs[1][j], Γs[1][k]) for j in 1:3, k in 1:3]
 
 Over the whole window the largest entry of $\Theta^{\top} \Gamma - I$ is $7 \times 10^{-15}$.
 
+<p align="center">
+  <img src="assets/lorenz_vectors.png" alt="Unstable and stable covariant Lyapunov vectors of the Lorenz equations, and their adjoints, along eight time units of the trajectory" width="820">
+</p>
+
+The figure shows the directions of the unstable and of the stable vector of each family along the
+first eight time units of the window, in the plane $(x, z)$, at one sample every three. The whole
+window is in light grey. The neutral CLV $\gamma_2$, not shown, is along the trajectory.
+
 ### Angles and transversality
 
 The angles between the CLVs at the first sample are the following, in radians.
@@ -471,6 +547,17 @@ above 0.22, while the unstable and the neutral vectors come within 0.025 radians
 which is also the smallest value of $c_1$ and of $c_2$. The smallest angles between $\gamma_1$ and
 $\gamma_3$ and between $\gamma_2$ and $\gamma_3$ are 0.235 and 0.229 radians.
 
+<p align="center">
+  <img src="assets/lorenz_transversality.png" alt="Transversality of the three covariant Lyapunov vectors of the Lorenz equations in time, and length of the first adjoint vector on the attractor" width="820">
+</p>
+
+Panel (a) shows the three transversalities over the first 20 time units. The stable vector is close
+to the normal to the plane of the other two most of the time, so that $c_1$ and $c_2$ nearly
+coincide, both close to the sine of the angle between $\gamma_1$ and $\gamma_2$. Panel (b) shows the
+length of the first adjoint CLV, the inverse of $c_1$, at the 1001 samples of the window, in the
+plane $(x, z)$. The near tangencies are on the outer loops of the two lobes of the attractor, and
+$c_1$ is below 0.1 at 7% of the samples.
+
 ### Projection of a perturbation
 
 The components of a perturbation on the CLVs are its inner products with the adjoint CLVs.
@@ -491,6 +578,20 @@ of the neutral and stable vectors. The sign of each `a[j]` follows the orientati
 With `N` smaller than the dimension of the system, the first `N` components are obtained in the same
 way, and the remainder lies in the span of the CLVs that are not computed.
 
+<p align="center">
+  <img src="assets/lorenz_projection.png" alt="Growth of the three components of a perturbation of the Lorenz equations on the covariant Lyapunov vectors" width="820">
+</p>
+
+The figure shows the components of one perturbation $y(t)$, marched with the tangent flow from a
+random vector at the start of the window, with $t$ measured from there. By the covariance of the two
+families, the component $\langle \theta_j(t), y(t) \rangle$ is its value at $t = 0$ times the growth
+factor $\mu_j(t, 0)$. Each component evolves by itself, and the adjoint CLVs separate them. The
+first grows at the rate 0.84 over 16 time units, close to the first exponent, whose exponential is
+the grey line, with the fluctuations of the growth over finite times. The second stays between 0.23
+and 4.0, since its growth factor is the ratio of the speeds $\lVert f(u) \rVert$ at the two times.
+The third decays as $e^{-14.57 t}$, and falls to rounding error relative to the perturbation in
+about two time units.
+
 
 ## Choosing the parameters
 
@@ -503,10 +604,23 @@ re-orthonormalisations and of the recombination as $N^2$.
 ### Spin-up
 
 The spans of the first $j$ vectors of each set converge as $e^{-(\lambda_j - \lambda_{j+1}) \tau}$
-with the length $\tau$ of the spin-up. The smallest gap between consecutive exponents among the
-first $N + 1$ therefore sets `tspin`, and the last vector depends on the gap with the first exponent
-left out. For the Lorenz equations the smallest gap is 0.906, and a spin-up of 25 time units leaves
-an error of about $10^{-9}$. Two exponents of equal value give a plane rather than two vectors.
+with the length $\tau$ of the spin-up. The vector $j$ of each family needs the span of the first $j$
+vectors of its own set and that of the first $j - 1$ vectors of the other set, and converges at the
+smaller of the gaps between $\lambda_j$ and the two exponents next to it. The smallest gap between
+consecutive exponents among the first $N + 1$ therefore sets `tspin`, and the last vector depends on
+the gap with the first exponent left out. For the Lorenz equations the smallest gap is 0.906, and a
+spin-up of 25 time units leaves an error of about $10^{-9}$. Two exponents of equal value give a
+plane rather than two vectors.
+
+<p align="center">
+  <img src="assets/spinup.png" alt="Error of the first three covariant Lyapunov vectors and of their adjoints against the length of the spin-up, on a linear system" width="820">
+</p>
+
+The figure shows the error of the first three vectors of each family against `tspin`, on the fixed
+point of a linear system of dimension four, where the CLVs are the right eigenvectors of the matrix
+and their adjoints the left ones. The exponents are 1, −0.2, −0.9 and −1.25, with gaps of 1.2, 0.7
+and 0.35. The errors decay at the rates 1.20, 0.70 and 0.35, down to rounding error. The third
+vector is set by the gap with the fourth exponent, which is not computed.
 
 ### Window and sampling
 
@@ -517,6 +631,16 @@ first and of the last approaches $10^{16}$. `T` must be a whole number of sampli
 because the tangent set is sampled counting the time steps from the start of the window and the
 adjoint set counting them from its end. Otherwise `computeCLV` throws an `ArgumentError`, after the
 forward pass.
+
+<p align="center">
+  <img src="assets/sampling.png" alt="Samples of the tangent and of the adjoint set in a window of three and of three and a half sampling intervals" width="820">
+</p>
+
+The figure shows the samples of the tangent set, the discs, and of the adjoint set, the rings, with
+a sampling interval of four time steps. The last state of each pass is always saved. In panel (a)
+the window is three sampling intervals long, and the two sets are sampled at the same times. In
+panel (b) it is three and a half, and the samples that would be combined, joined in red, are at
+different times.
 
 ### Memory
 
@@ -541,13 +665,14 @@ error enters both families through $P$.
 
 The vectors are those of the discrete flows, and differ from those of the differential equations by
 the error of the time integration and of the interpolation of the trajectory, which is stored at
-every time step and interpolated with Lagrange polynomials of degree three. On the Lorenz equations,
-the neutral CLV differs from the direction of the flow by $3 \times 10^{-6}$ with a time step of
-0.005, by $6 \times 10^{-7}$ with 0.0025 and by $10^{-8}$ with 0.00125.
+every time step and interpolated with Lagrange polynomials of degree three. Over the window of the
+example above, the neutral CLV differs from the direction of the flow by at most $2 \times 10^{-5}$
+with a time step of 0.005, by $2 \times 10^{-6}$ with 0.0025 and by $9 \times 10^{-8}$ with 0.00125,
+the fourth order of the scheme.
 
-The convergence of the two sets with the spin-up adds to these errors. On the Lorenz equations with
-a spin-up of 25 time units, the first two vectors of each family computed with two and with three
-vectors differ by $3 \times 10^{-9}$.
+The convergence of the two sets with the spin-up adds to these errors. In the example above, with a
+spin-up of 25 time units, the first two vectors of each family computed with two and with three
+vectors differ by less than $10^{-9}$.
 
 
 ## Limitations
@@ -587,6 +712,24 @@ with
 ```
 julia --project -e 'using Pkg; Pkg.test()'
 ```
+
+
+## Reproducing the figures
+
+The diagrams of this manual are drawn by `examples/make_diagrams.jl`, with exact geometry and no
+integration. The figures with results come from `examples/make_figures.jl`, which also prints every
+number quoted about the example on the Lorenz equations, about the accuracy and about the
+convergence with the spin-up. The two scripts share an environment, with CairoMakie and with
+Flows.jl from GitHub, and the colours and theme of the figures in `examples/style.jl`. From the root
+of the repository, run
+
+```
+julia --project=examples -e 'using Pkg; Pkg.instantiate()'
+julia --project=examples examples/make_diagrams.jl
+julia --project=examples examples/make_figures.jl
+```
+
+Each script takes about a minute, most of it to load CairoMakie.
 
 
 ## References
