@@ -6,6 +6,42 @@ using Flows,
 export computeCLV, angles
 
 
+"""
+    computeCLV(flow_nl, flow_tan, flow_adj, x, randx,
+               tspin, T, Nsplits, N, oneevery=10) -> ts, Γs, Θs
+
+Compute the first `N` covariant Lyapunov vectors (CLVs) and the adjoint CLVs
+dual to them along the trajectory through `x`, over a window of length `T`
+that follows a spin-up of length `tspin`. Return the sample times `ts`,
+measured from the start of the window, the CLVs `Γs` and the adjoint CLVs
+`Θs`. `Γs[i][j]` and `Θs[i][j]` are the `j`-th vectors at time `ts[i]`.
+
+The arguments are:
+
+  - `flow_nl`: flow of the nonlinear equations, called as `flow_nl(x, span)`
+    and as `flow_nl(x, span, storage)`;
+  - `flow_tan`, `flow_adj`: flows of the tangent and of the adjoint equations
+    for `N` coupled vectors, along a stored trajectory, called as
+    `flow_tan(ψ, storage, span, monitor)`. The adjoint one marches backward
+    in time;
+  - `x`: state at time zero, where the spin-up starts. It is modified;
+  - `randx`: function returning a new random state at every call, for the
+    initial tangent and adjoint vectors;
+  - `tspin`: length of the spin-up of the tangent vectors, before the window,
+    and of the adjoint vectors, after it;
+  - `T`: length of the window, a whole number of sampling intervals;
+  - `Nsplits`: number of chunks of the spin-up, whose trajectory is held in
+    memory one chunk at a time;
+  - `N`: number of vectors;
+  - `oneevery`: number of time steps between two Gram-Schmidt
+    orthonormalisations, and between two samples of the output.
+
+The vectors are sorted by decreasing Lyapunov exponent. The CLVs have unit
+`norm`, and the adjoint CLVs are scaled so that `dot(Θs[i][j], Γs[i][k])` is
+one for `j == k` and zero otherwise. The adjoint equations must be the adjoint
+of the tangent ones in the inner product `dot`. The time taken by each stage
+of the calculation is printed to `stdout`.
+"""
 function computeCLV(flow_nl, flow_tan, flow_adj, x::X, randx, 
                     tspin::Real, T::Real, Nsplits::Int, N::Int, oneevery::Int=10) where {X}
     # construct the storage
@@ -98,7 +134,10 @@ function computeCLV(flow_nl, flow_tan, flow_adj, x::X, randx,
     reverse!(times(mon_adj_cp))
     reverse!(samples(mon_adj_cp))
 
-    return times(mon_tan_cp) .- tspin, _process(samples(mon_adj_cp), samples(mon_tan_cp))
+    # turn the samples of the two sets into the CLVs and the adjoint CLVs
+    Γs, Θs = _process!(samples(mon_adj_cp), samples(mon_tan_cp))
+
+    return times(mon_tan_cp) .- tspin, Γs, Θs
 end
 
 # re-orthogonalisation step for storage marching
@@ -119,32 +158,44 @@ end
 # copying version
 gs_ortho_Q_cp!(t, ψs) = copy(gs_ortho_Q!(t, ψs))
 
-function _process(ψ⁺s::AbstractVector{Coupled{N, T}},
-                  ψ⁻s::AbstractVector{Coupled{N, T}}) where {N, T}
-    Γs = Coupled{N, T}[]
-
+# Turn the Gram-Schmidt vectors of the tangent equations, `ψ⁻s`, into the CLVs,
+# and those of the adjoint equations, `ψ⁺s`, into the adjoint CLVs, in place,
+# sample by sample. With P the matrix of the inner products between the two
+# sets and P = LU its factorisation without pivoting, the CLVs are the columns
+# of ψ⁻U⁻¹ and the adjoint CLVs those of ψ⁺L⁻ᵀ.
+function _process!(ψ⁺s::AbstractVector{Coupled{N, T}},
+                   ψ⁻s::AbstractVector{Coupled{N, T}}) where {N, T}
     for i in eachindex(ψ⁺s)
-        # construct P matrix
-        P = [dot(ψ⁺s[i][j], ψ⁻s[i][k]) for j = 1:N, k = 1:N]
+        ψ⁺ = ψ⁺s[i]
+        ψ⁻ = ψ⁻s[i]
 
-        # compute LU decomposition, without pivoting
-        A⁻ = inv(lu(P, Val(false)).U)
+        # ---- inner products between the two sets ----
+        P = [dot(ψ⁺[j], ψ⁻[k]) for j = 1:N, k = 1:N]
 
-        # construct linear combination of backwards lyapunov vectors
-        Γ = similar(ψ⁻s[1])
-        for j in 1:N
-            Γ[j] .= 0
-            for k in 1:N
-                Γ[j] .+= ψ⁻s[i][k] .* A⁻[k, j]
+        # ---- coefficients of the two combinations ----
+        # Both matrices are upper triangular, and B has unit diagonal.
+        F = lu(P, NoPivot())
+        A = inv(F.U)
+        B = inv(F.L)'
+
+        # ---- combine in place ----
+        # Vector j needs the vectors from 1 to j only. Going from the last to
+        # the first, each one is overwritten after its last use.
+        for j in N:-1:1
+            ψ⁻[j] .*= A[j, j]
+            for k in 1:j-1
+                ψ⁻[j] .+= ψ⁻[k] .* A[k, j]
+                ψ⁺[j] .+= ψ⁺[k] .* B[k, j]
             end
-            Γ[j] ./= norm(Γ[j])
-        end
 
-        # store
-        push!(Γs, Γ)
+            # CLV of unit norm, and adjoint CLV of unit inner product with it
+            a = norm(ψ⁻[j])
+            ψ⁻[j] ./= a
+            ψ⁺[j] .*= a
+        end
     end
 
-    return Γs
+    return ψ⁻s, ψ⁺s
 end
 
 
