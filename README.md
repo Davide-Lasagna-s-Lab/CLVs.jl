@@ -516,10 +516,11 @@ Julia 1.11 or later is required.
 ### The function `computeCLV`
 
 ```julia
-ts, Γs, Θs, λs = computeCLV(flow_nl, flow_tan, flow_adj, x, randx, tspin, T, Nsplits, N, oneevery=10)
+ts, Γs, Θs, λs = computeCLV(flow_nl, flow_tan, flow_adj, x, randx, tspin, T, Nsplits, N, oneevery=10; degree=3)
 ```
 
-The arguments are positional, and are listed in the following table.
+The arguments are positional, except for the keyword `degree`, and are listed in the following
+table.
 
 | Argument   | Meaning |
 |------------|---------|
@@ -533,6 +534,7 @@ The arguments are positional, and are listed in the following table.
 | `Nsplits`  | Number of chunks of each spin-up. The trajectory of a spin-up is held in memory one chunk at a time. |
 | `N`        | Number of vectors of each family. |
 | `oneevery` | Number of time steps between two re-orthonormalisations, and between two samples of the output. The default is 10. |
+| `degree`   | Degree of the polynomials that interpolate the stored trajectory in time, an odd number not smaller than three. The default is 3. |
 
 The function returns four objects.
 
@@ -579,6 +581,9 @@ equations. The call dependency states that each vector is advanced by itself. Fl
 default for up to three coupled components only, so that it must be given for larger `N`. The
 tangent and adjoint flows must have the same time step. The tangent and adjoint vectors are of the
 type of the state.
+
+The scheme RK8 of Flows.jl, of order eight, takes the place of RK4 in the three flows. The stored
+trajectory must then be interpolated to a matching order, with `degree=7`.
 
 ### The function `angles`
 
@@ -839,16 +844,19 @@ The covariance of the vectors holds for the discrete tangent and adjoint flows, 
 second is the transpose of the first. With RK4 in the continuous mode of Flows.jl this is the case,
 since each step of the adjoint flow is the transpose of the step of the tangent flow over the same
 stored trajectory. In the tests on the Lorenz equations the tangent flow maps each CLV onto its next
-sample, and the adjoint flow each adjoint CLV onto its previous one, to $10^{-13}$. With a scheme
-whose adjoint is the transpose of the tangent only up to the error of the time discretisation, this
-error enters both families through $P$.
+sample, and the adjoint flow each adjoint CLV onto its previous one, to $10^{-13}$, with RK4 and
+with RK8 alike. With a scheme whose adjoint is the transpose of the tangent only up to the error of
+the time discretisation, this error enters both families through $P$.
 
 The vectors are those of the discrete flows, and differ from those of the differential equations by
 the error of the time integration and of the interpolation of the trajectory, which is stored at
-every time step and interpolated with Lagrange polynomials of degree three. Over the window of the
-example above, the neutral CLV differs from the direction of the flow by at most $2 \times 10^{-5}$
-with a time step of 0.005, by $2 \times 10^{-6}$ with 0.0025 and by $9 \times 10^{-8}$ with 0.00125,
-the fourth order of the scheme.
+every time step and interpolated with Lagrange polynomials of the degree `degree`, three by default.
+Over the window of the example above, with RK4, the neutral CLV differs from the direction of the
+flow by at most $2 \times 10^{-5}$ with a time step of 0.005, by $2 \times 10^{-6}$ with 0.0025 and
+by $9 \times 10^{-8}$ with 0.00125, the fourth order of the scheme. A scheme of higher order needs a
+higher degree. With RK8 and a time step of 0.005 the same difference is $10^{-5}$ with the cubic
+interpolation, and $8 \times 10^{-10}$ with `degree=7`, which is the level of the error left by the
+spin-up.
 
 The convergence of the two sets with the spin-up adds to these errors. In the example above, with a
 spin-up of 25 time units, the first two vectors of each family computed with two and with three
@@ -886,7 +894,10 @@ and the adjoint flow each adjoint CLV onto its previous sample, with the same gr
 $10^{-10}$, and the growth rates that `computeCLV` returns must be those of this integration. The
 two families must be dual, the neutral CLV must be the direction of the flow to the error of the
 time discretisation, and the first two vectors of each family must not depend on the number of
-vectors computed. A last test checks `angles` on three vectors of the plane. Run the tests with
+vectors computed. The same trajectory is then computed with RK8. The neutral CLV must be the
+direction of the flow to $10^{-7}$ with `degree=7`, and not with the cubic interpolation, and the
+covariance must hold as with RK4. A last test checks `angles` on three vectors of the plane. Run the
+tests with
 
 ```
 julia --project -e 'using Pkg; Pkg.test()'
