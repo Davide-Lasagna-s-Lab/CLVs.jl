@@ -11,20 +11,20 @@ Random.seed!(0)
 
 # The three flows that `computeCLV` takes, for states in ℝⁿ and `N` vectors:
 # the flow of the nonlinear equations `f`, and those of the tangent and adjoint
-# equations `ftan` and `fadj` along a stored trajectory, all with RK4 steps of
-# size `Δt`.
-function flows(f, ftan, fadj, n, N, Δt)
+# equations `ftan` and `fadj` along a stored trajectory, all with steps of
+# size `Δt` of the scheme `scheme`, RK4 or RK8.
+function flows(f, ftan, fadj, n, N, Δt, scheme=RK4)
     z   = couple(ntuple(i -> zeros(n), N)...)
     dep = CallDependency(ntuple(i -> (i,), N)...)
 
-    flow_nl  = flow(f, RK4(zeros(n)), TimeStepConstant(Δt))
+    flow_nl  = flow(f, scheme(zeros(n)), TimeStepConstant(Δt))
     flow_tan = flow(couple(ntuple(i -> ftan, N)...),
                     dep,
-                    RK4(z, ContinuousMode(false)),
+                    scheme(z, ContinuousMode(false)),
                     TimeStepFromStorage(Δt))
     flow_adj = flow(couple(ntuple(i -> fadj, N)...),
                     dep,
-                    RK4(z, ContinuousMode(true)),
+                    scheme(z, ContinuousMode(true)),
                     TimeStepFromStorage(Δt))
 
     return flow_nl, flow_tan, flow_adj

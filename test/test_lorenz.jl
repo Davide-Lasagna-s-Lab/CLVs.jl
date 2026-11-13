@@ -119,4 +119,54 @@ end
     end
     @test errΓ < 1e-6
     @test errΘ < 1e-6
+
+    # ---- a scheme of higher order needs a higher degree of interpolation ----
+    # With RK8 the neutral CLV is the direction of the flow to 5e-6 with the
+    # cubic interpolation of the stored trajectory, and to 2e-9 with degree 7.
+    flow_nl, flow_tan, flow_adj = flows(lorenz, lorenz_tan, lorenz_adj, 3, 3, Δt, RK8)
+    x0 = flow_nl([1.0, 1.0, 20.0], (0, 20))
+    for (degree, low, high) in ((3, 1e-7, 1e-4), (7, 0.0, 1e-7))
+        ts, Γs, Θs, λs = quiet() do
+            computeCLV(flow_nl, flow_tan, flow_adj, copy(x0), () -> randn(3),
+                       tspin, T, Nsplits, 3, oneevery; degree=degree)
+        end
+
+        # the trajectory over the window, as above
+        x = copy(x0)
+        t = 0
+        for i in 1:Nsplits
+            flow_nl(x, (t, t + tspin/Nsplits))
+            t += tspin/Nsplits
+        end
+        store = RAMStorage(x; degree=degree)
+        flow_nl(x, (tspin, tspin + T), store)
+        xk = samples(store)[1:oneevery:end]
+
+        err = 0.0
+        for i in eachindex(ts)
+            lorenz(0.0, xk[i], dxdt)
+            err = max(err, misalignment(Γs[i][2], dxdt ./ norm(dxdt)))
+        end
+        @test low < err < high
+        @test maximum(abs(dot(Θ[j], Γ[k]) - (j == k))
+                      for (Γ, Θ) in zip(Γs, Θs), j in 1:3, k in 1:3) < 1e-10
+
+        # the covariance of the two families, as for RK4
+        tk   = times(store)[1:oneevery:end]
+        errΓ = 0.0
+        errΘ = 0.0
+        for i in 1:length(ts)-1
+            v = copy(Γs[i])
+            w = copy(Θs[i+1])
+            flow_tan(v, store, (tk[i], tk[i+1]))
+            flow_adj(w, store, (tk[i+1], tk[i]))
+            for j in 1:3
+                μ    = dot(Θs[i+1][j], v[j])
+                errΓ = max(errΓ, norm(v[j] .- μ .* Γs[i+1][j]) / norm(v[j]))
+                errΘ = max(errΘ, norm(w[j] .- μ .* Θs[i][j]) / norm(w[j]))
+            end
+        end
+        @test errΓ < 1e-10
+        @test errΘ < 1e-10
+    end
 end

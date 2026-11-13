@@ -8,7 +8,7 @@ export computeCLV, angles
 
 """
     computeCLV(flow_nl, flow_tan, flow_adj, x, randx,
-               tspin, T, Nsplits, N, oneevery=10) -> ts, Γs, Θs, λs
+               tspin, T, Nsplits, N, oneevery=10; degree=3) -> ts, Γs, Θs, λs
 
 Compute the first `N` covariant Lyapunov vectors (CLVs) and the adjoint CLVs
 dual to them along the trajectory through `x`, over a window of length `T`
@@ -36,7 +36,9 @@ The arguments are:
     memory one chunk at a time;
   - `N`: number of vectors;
   - `oneevery`: number of time steps between two Gram-Schmidt
-    orthonormalisations, and between two samples of the output.
+    orthonormalisations, and between two samples of the output;
+  - `degree`: degree of the polynomials that interpolate the stored
+    trajectory in time, an odd number not smaller than three.
 
 The vectors are sorted by decreasing Lyapunov exponent. The CLVs have unit
 `norm`, and the adjoint CLVs are scaled so that `dot(Θs[i][j], Γs[i][k])` is
@@ -48,9 +50,10 @@ product `dot`. The time taken by each stage of the calculation is printed to
 `stdout`.
 """
 function computeCLV(flow_nl, flow_tan, flow_adj, x::X, randx, 
-                    tspin::Real, T::Real, Nsplits::Int, N::Int, oneevery::Int=10) where {X}
+                    tspin::Real, T::Real, Nsplits::Int, N::Int, oneevery::Int=10;
+                    degree::Int=3) where {X}
     # construct the storage
-    storage = RAMStorage(X);
+    storage = RAMStorage(X; degree=degree);
 
     # initialise backward and forward lyapunov vectors,
     # to be marched forward and backward

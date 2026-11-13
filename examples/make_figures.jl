@@ -24,16 +24,16 @@ quiet(f) = redirect_stdout(f, devnull)
 
 # The flows that `computeCLV` takes, for states of length n and N vectors: the flow of the
 # nonlinear equations f, and those of the tangent and adjoint equations ftan and fadj along a
-# stored trajectory, with RK4 steps of size Δt.
-function flows(f, ftan, fadj, n, N, Δt)
+# stored trajectory, with steps of size Δt of the scheme `scheme`, RK4 or RK8.
+function flows(f, ftan, fadj, n, N, Δt, scheme=RK4)
     z   = couple(ntuple(i -> zeros(n), N)...)
     dep = CallDependency(ntuple(i -> (i,), N)...)
 
-    flow_nl  = flow(f, RK4(zeros(n)), TimeStepConstant(Δt))
+    flow_nl  = flow(f, scheme(zeros(n)), TimeStepConstant(Δt))
     flow_tan = flow(couple(ntuple(i -> ftan, N)...), dep,
-                    RK4(z, ContinuousMode(false)), TimeStepFromStorage(Δt))
+                    scheme(z, ContinuousMode(false)), TimeStepFromStorage(Δt))
     flow_adj = flow(couple(ntuple(i -> fadj, N)...), dep,
-                    RK4(z, ContinuousMode(true)), TimeStepFromStorage(Δt))
+                    scheme(z, ContinuousMode(true)), TimeStepFromStorage(Δt))
 
     return flow_nl, flow_tan, flow_adj
 end
@@ -41,14 +41,14 @@ end
 # The trajectory over the window of `computeCLV`, from the state x at time zero, in a storage
 # that holds it at every time step. The spin-up goes in the same chunks as in `computeCLV`, so
 # that the trajectory is the same to the last bit.
-function window(flow_nl, x, tspin, T, Nsplits)
+function window(flow_nl, x, tspin, T, Nsplits; degree=3)
     u = copy(x)
     t = 0
     for i in 1:Nsplits
         flow_nl(u, (t, t + tspin/Nsplits))
         t += tspin/Nsplits
     end
-    store = RAMStorage(u)
+    store = RAMStorage(u; degree=degree)
     flow_nl(u, (tspin, tspin + T), store)
     return store
 end
@@ -289,18 +289,20 @@ i₃ = findfirst(>=(2), ts)
 
 println("\nAccuracy")
 
-# the neutral CLV against the direction of the flow, with three time steps and the same sampling
-for h in (0.005, 0.0025, 0.00125)
+# the neutral CLV against the direction of the flow, with the same sampling, for RK4 with three
+# time steps and for RK8 with two degrees of the interpolation of the stored trajectory
+for (name, scheme, h, degree) in (("RK4", RK4, 0.005, 3), ("RK4", RK4, 0.0025, 3), ("RK4", RK4, 0.00125, 3),
+                                  ("RK8", RK8, 0.005, 3), ("RK8", RK8, 0.005, 7))
     every      = round(Int, 0.05/h)
-    F, Ft, Fa  = flows(lorenz, lorenz_tan, lorenz_adj, 3, 3, h)
+    F, Ft, Fa  = flows(lorenz, lorenz_tan, lorenz_adj, 3, 3, h, scheme)
     w          = F([1.0, 1.0, 20.0], (0, 20))
-    states     = samples(window(F, w, tspin, T, Nsplits))[1:every:end]
+    states     = samples(window(F, w, tspin, T, Nsplits; degree=degree))[1:every:end]
     Random.seed!(0)
     _, G, _ = quiet() do
-        computeCLV(F, Ft, Fa, w, () -> randn(3), tspin, T, Nsplits, 3, every)
+        computeCLV(F, Ft, Fa, w, () -> randn(3), tspin, T, Nsplits, 3, every; degree=degree)
     end
     off = misalignment([Γ[2] for Γ in G], [lorenz(0.0, s, zeros(3)) for s in states])
-    @printf "time step %.5f: neutral CLV against the direction of the flow %.1e\n" h off
+    @printf "%s, time step %.5f, degree %d: neutral CLV against the direction of the flow %.1e\n" name h degree off
 end
 
 # the first two vectors of each family, with two vectors instead of three
