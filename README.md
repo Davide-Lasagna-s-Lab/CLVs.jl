@@ -208,59 +208,140 @@ and in the plane normal to $\psi_1^-$. The vectors of the two panels are dual to
 
 ## The LU factorisation
 
-Let $\Psi^-$, $\Psi^+$, $\Gamma$ and $\Theta$ be the matrices whose columns are the vectors of the
-two sets, the first $N$ CLVs and their adjoints, at one time. By the spans of the previous section,
+At each time of the window the two sets of Gram–Schmidt vectors are known. The CLVs and their
+adjoints follow from them with the factorisation of one matrix of size $N$, which this section
+derives in three steps. All the vectors are taken at the same time.
+
+**Matrices of vectors.** The $N$ vectors of a set, or of a family, are collected as the columns of a
+matrix,
 
 ```math
-\Gamma = \Psi^- A , \qquad \Theta = \Psi^+ B ,
+\Psi^- = \begin{bmatrix} \psi_1^- & \cdots & \psi_N^- \end{bmatrix} , \qquad
+\Psi^+ = \begin{bmatrix} \psi_1^+ & \cdots & \psi_N^+ \end{bmatrix} ,
 ```
 
-with $A$ and $B$ upper triangular matrices of size $N$. Let $P = \Psi^{+\top} \Psi^-$ be the matrix
-of the inner products between the two sets, of entries
-$P_{ij} = \langle \psi_i^+, \psi_j^- \rangle$. The orthogonality of $\theta_i$ and $\gamma_j$ for
-$i \ne j$ reads
+for the tangent and the adjoint set, and
 
 ```math
-\Theta^{\top} \Gamma = B^{\top} P A = D , \qquad D \text{ diagonal},
+\Gamma = \begin{bmatrix} \gamma_1 & \cdots & \gamma_N \end{bmatrix} , \qquad
+\Theta = \begin{bmatrix} \theta_1 & \cdots & \theta_N \end{bmatrix} ,
 ```
 
-that is $P = B^{-\top} D A^{-1}$, the product of a lower triangular, a diagonal and an upper
-triangular matrix. This is the LU factorisation of $P$ without pivoting, which is unique. With $L$
-unit lower triangular and $U$ upper triangular,
+for the first $N$ CLVs and their adjoints. Each matrix has $n$ rows, one for each component of the
+state, and $N$ columns. Two operations on these matrices are needed. The product $\Psi^- A$ with a
+matrix $A$ of size $N$ combines the vectors: its column $j$ is $\sum_k A_{kj} \psi_k^-$. The product
+$\Psi^{+\top} \Psi^-$ of two of them is the matrix of size $N$ of their inner products, of entries
+$\langle \psi_i^+, \psi_j^- \rangle$. In this notation the duality of the two families reads
+$\Theta^{\top} \Gamma = I$. The code holds each of these matrices as a `Coupled` object of `N`
+states, and only ever combines the states and takes their inner products.
+
+**Step 1: the vectors are triangular combinations of the two sets.** By the spans of the previous
+section, $\gamma_j$ lies in the span of the first $j$ vectors of the tangent set, and $\theta_j$ in
+that of the first $j$ vectors of the adjoint set,
 
 ```math
-P = L U , \qquad \tilde\Gamma = \Psi^- U^{-1} , \qquad \tilde\Theta = \Psi^+ L^{-\top} ,
+\gamma_j = \sum_{k=1}^{j} A_{kj} \psi_k^- , \qquad
+\theta_j = \sum_{k=1}^{j} B_{kj} \psi_k^+ , \qquad j = 1, \dots, N .
 ```
 
-so that
+No vector of index larger than $j$ enters. The coefficients therefore fill two upper triangular
+matrices $A$ and $B$ of size $N$, and the two sums read
 
 ```math
-\tilde\Theta^{\top} \tilde\Gamma = L^{-1} \Psi^{+\top} \Psi^- U^{-1} = L^{-1} P\, U^{-1} = I .
+\Gamma = \Psi^- A , \qquad \Theta = \Psi^+ B .
+```
+
+These coefficients are the unknowns.
+
+**Step 2: the duality gives their equations.** The two families are dual, so that $\theta_i$ is
+orthogonal to $\gamma_j$ for $i \ne j$. Let
+
+```math
+P = \Psi^{+\top} \Psi^- , \qquad P_{ij} = \langle \psi_i^+, \psi_j^- \rangle ,
+```
+
+be the matrix of the inner products between the two sets. It is the only quantity that involves the
+states, through $N^2$ inner products. The inner products between the two families are those between
+the two sets, combined with the coefficients, and the orthogonality reads
+
+```math
+\Theta^{\top} \Gamma = B^{\top} \Psi^{+\top} \Psi^- A = B^{\top} P A = D ,
+```
+
+where $D$ is a diagonal matrix, of entries $\langle \theta_j, \gamma_j \rangle$.
+
+**Step 3: these equations are an LU factorisation.** Solved for $P$, they read
+
+```math
+P = B^{-\top} D A^{-1} .
+```
+
+The inverse of an upper triangular matrix is upper triangular, and its transpose is lower
+triangular. The matrix $P$ is thus the product of a lower triangular matrix, a diagonal one and an
+upper triangular one, which is its LU factorisation without pivoting,
+
+```math
+P = L U ,
+```
+
+with $L$ lower triangular with ones on its diagonal and $U$ upper triangular. This factorisation is
+unique. The matrices $A$ and $B$ are therefore known up to a factor for each of their columns, that
+is up to the length of each vector, which the orthogonality does not set. The choice $A = U^{-1}$
+and $B = L^{-\top}$ gives
+
+```math
+\tilde\Gamma = \Psi^- U^{-1} , \qquad \tilde\Theta = \Psi^+ L^{-\top} , \qquad
+\tilde\Theta^{\top} \tilde\Gamma = L^{-1} P U^{-1} = I .
 ```
 
 The columns of $\tilde\Gamma$ and $\tilde\Theta$ are the CLVs and the adjoint CLVs up to their
-length, and they are dual as they stand. The factorisation does not pivot, because the order of the
-nested subspaces carries the information.
+length, which the tilde marks and the next section sets, and they are dual as they stand. The
+factorisation does not pivot, because the order of the nested subspaces carries the information.
 
 <p align="center">
   <img src="assets/factorisation.png" alt="Shapes of the matrices of the factorisation and of the two triangular combinations, for three vectors" width="820">
 </p>
 
-The figure shows the shapes of the matrices for $N = 3$. The matrices of the vectors have $n$ rows,
-one for each component of the state, and the factors are of size $N$. The column $j$ of $U^{-1}$ and
-of $L^{-\top}$ holds the coefficients of the vector $j$ on the first $j$ vectors of its set. The
-diagonal of $L^{-\top}$ is made of ones, so that $\tilde\theta_j$ is $\psi_j^+$ plus a combination
-of the vectors before it.
+The figure shows the shapes of the matrices for $N = 3$. The matrices of the vectors are tall, and
+the factors are of size $N$. The column $j$ of $U^{-1}$ and of $L^{-\top}$, in the colour of the
+vector $j$, holds the coefficients of that vector on the first $j$ vectors of its set. The diagonal
+of $L^{-\top}$ is made of ones, so that $\tilde\theta_j$ is $\psi_j^+$ plus a combination of the
+vectors before it.
 
-The factorisation exists if the leading blocks of $P$ are non-singular. The block of size $j$ is
-singular only if a non-zero combination of $\gamma_1, \dots, \gamma_j$ is orthogonal to
+**The case of two vectors.** With $N = 2$ the factors are
+
+```math
+L = \begin{bmatrix} 1 & 0 \\ \ell & 1 \end{bmatrix} , \qquad
+U = \begin{bmatrix} P_{11} & P_{12} \\ 0 & P_{22} - \ell P_{12} \end{bmatrix} , \qquad
+\ell = \frac{P_{21}}{P_{11}} ,
+```
+
+and the vectors are
+
+```math
+\tilde\gamma_1 = \frac{\psi_1^-}{U_{11}} , \qquad
+\tilde\gamma_2 = \frac{1}{U_{22}} \left( \psi_2^- - \frac{P_{12}}{P_{11}} \psi_1^- \right) , \qquad
+\tilde\theta_1 = \psi_1^+ , \qquad
+\tilde\theta_2 = \psi_2^+ - \frac{P_{21}}{P_{11}} \psi_1^+ .
+```
+
+The first vector of each family is the first vector of its set. The second CLV is $\psi_2^-$ less
+the multiple of $\psi_1^-$ that makes it orthogonal to $\psi_1^+$: its inner product with $\psi_1^+$
+is proportional to $P_{12} - (P_{12}/P_{11}) P_{11}$, which is zero. In the same way, the second
+adjoint CLV is $\psi_2^+$ less the multiple of $\psi_1^+$ that makes it orthogonal to $\psi_1^-$.
+These are the two intersections of the previous section. With more vectors the elimination goes on
+in the same way, and the factorisation is a Gram–Schmidt procedure between the two sets: it makes
+each vector of one family orthogonal to the vectors of lower index of the other set.
+
+**Existence.** The factorisation exists if the leading blocks of $P$ are non-singular. The block of
+size $j$ is singular only if a non-zero combination of $\gamma_1, \dots, \gamma_j$ is orthogonal to
 $\theta_1, \dots, \theta_j$, which the duality excludes. A small pivot $U_{jj}$ signals a near
 tangency between the CLVs.
 
-With $N$ smaller than the dimension of the system the vectors are exact for the $N$ leading
-exponents. Only the leading block of $P$ enters, and the orthogonality of $\theta_i$ to the CLVs
-that are not computed follows from the spans of the adjoint set. The vectors $\gamma_j$ and
-$\theta_j$ need the first $j$ vectors of each set.
+**Fewer vectors than the dimension.** With $N$ smaller than the dimension of the system the vectors
+are exact for the $N$ leading exponents. Only the leading block of $P$ enters, and the orthogonality
+of $\theta_i$ to the CLVs that are not computed follows from the spans of the adjoint set. The
+vectors $\gamma_j$ and $\theta_j$ need the first $j$ vectors of each set.
 
 
 ## Normalisation and transversality
