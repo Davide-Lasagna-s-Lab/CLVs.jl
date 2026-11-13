@@ -253,8 +253,7 @@ matrices $A$ and $B$ of size $N$, and the two sums read
 
 These coefficients are the unknowns.
 
-**Step 2: the duality gives their equations.** The two families are dual, so that $\theta_i$ is
-orthogonal to $\gamma_j$ for $i \ne j$. Let
+**Step 2: the duality gives their equations.** Let
 
 ```math
 P = \Psi^{+\top} \Psi^- , \qquad P_{ij} = \langle \psi_i^+, \psi_j^- \rangle ,
@@ -262,41 +261,60 @@ P = \Psi^{+\top} \Psi^- , \qquad P_{ij} = \langle \psi_i^+, \psi_j^- \rangle ,
 
 be the matrix of the inner products between the two sets. It is the only quantity that involves the
 states, through $N^2$ inner products. The inner products between the two families are those between
-the two sets, combined with the coefficients, and the orthogonality reads
+the two sets, combined with the coefficients, and the duality $\Theta^{\top} \Gamma = I$ reads
 
 ```math
-\Theta^{\top} \Gamma = B^{\top} \Psi^{+\top} \Psi^- A = B^{\top} P A = D ,
+\Theta^{\top} \Gamma = B^{\top} \Psi^{+\top} \Psi^- A = B^{\top} P A = I .
 ```
-
-where $D$ is a diagonal matrix, of entries $\langle \theta_j, \gamma_j \rangle$.
 
 **Step 3: these equations are an LU factorisation.** Solved for $P$, they read
 
 ```math
-P = B^{-\top} D A^{-1} .
+P = B^{-\top} A^{-1} .
 ```
 
 The inverse of an upper triangular matrix is upper triangular, and its transpose is lower
-triangular. The matrix $P$ is thus the product of a lower triangular matrix, a diagonal one and an
-upper triangular one, which is its LU factorisation without pivoting,
+triangular. The matrix $P$ is thus the product of a lower triangular matrix and an upper triangular
+one. The LU factorisation of $P$ without pivoting,
 
 ```math
 P = L U ,
 ```
 
-with $L$ lower triangular with ones on its diagonal and $U$ upper triangular. This factorisation is
-unique. The matrices $A$ and $B$ are therefore known up to a factor for each of their columns, that
-is up to the length of each vector, which the orthogonality does not set. The choice $A = U^{-1}$
-and $B = L^{-\top}$ gives
+with $L$ lower triangular with ones on its diagonal and $U$ upper triangular, is a product of the
+same kind, and it is unique. The two products are not the same, because the diagonal of $B^{-\top}$
+is not made of ones, but they can differ only by a diagonal matrix $E$ between the factors,
 
 ```math
-\tilde\Gamma = \Psi^- U^{-1} , \qquad \tilde\Theta = \Psi^+ L^{-\top} , \qquad
-\tilde\Theta^{\top} \tilde\Gamma = L^{-1} P U^{-1} = I .
+B^{-\top} = L E , \qquad A^{-1} = E^{-1} U .
 ```
 
-The columns of $\tilde\Gamma$ and $\tilde\Theta$ are the CLVs and the adjoint CLVs up to their
-length, which the tilde marks and the next section sets, and they are dual as they stand. The
-factorisation does not pivot, because the order of the nested subspaces carries the information.
+Indeed $L^{-1} B^{-\top} = U A$, and a matrix that is both lower and upper triangular is diagonal.
+The coefficients are therefore
+
+```math
+A = U^{-1} E , \qquad B = L^{-\top} E^{-1} ,
+```
+
+and the vectors
+
+```math
+\Gamma = \tilde\Gamma E , \qquad \Theta = \tilde\Theta E^{-1} , \qquad \text{with} \qquad
+\tilde\Gamma = \Psi^- U^{-1} , \qquad \tilde\Theta = \Psi^+ L^{-\top} .
+```
+
+The factorisation gives every vector up to its length. With $e_j$ the entry $j$ of the diagonal of
+$E$, the CLV $\gamma_j$ is the column $\tilde\gamma_j$ of $\tilde\Gamma$ times $e_j$, and its
+adjoint $\theta_j$ is the column $\tilde\theta_j$ of $\tilde\Theta$ divided by $e_j$. The duality
+cannot set these factors, since it still holds when a CLV is stretched and its adjoint is shortened
+by the same factor. The columns of $\tilde\Gamma$ and $\tilde\Theta$ are thus dual as they stand,
+
+```math
+\tilde\Theta^{\top} \tilde\Gamma = L^{-1} P U^{-1} = I ,
+```
+
+and the next section sets $E$ from the length of the CLVs. The factorisation does not pivot, because
+the order of the nested subspaces carries the information.
 
 <p align="center">
   <img src="assets/factorisation.png" alt="Shapes of the matrices of the factorisation and of the two triangular combinations, for three vectors" width="820">
@@ -346,7 +364,9 @@ vectors $\gamma_j$ and $\theta_j$ need the first $j$ vectors of each set.
 
 ## Normalisation and transversality
 
-Each CLV is normalised to unit norm, and its adjoint is scaled to keep the duality,
+The factors $e_j$ that the factorisation leaves free are set by the length of the CLVs. Each CLV is
+normalised to unit norm, that is $e_j = 1 / \lVert \tilde\gamma_j \rVert$, and its adjoint is scaled
+by the inverse of this factor, which keeps the duality,
 
 ```math
 \gamma_j = \frac{\tilde\gamma_j}{\lVert \tilde\gamma_j \rVert} , \qquad
