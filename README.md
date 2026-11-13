@@ -9,10 +9,11 @@ together with the adjoint CLVs, the basis dual to them. It implements the method
 factorisation of Kuptsov and Parlitz (2012, section 5.2). A set of tangent vectors is marched
 forward along the trajectory and a set of adjoint vectors is marched backward, both
 re-orthonormalised at short intervals, and at each time of a window the two sets are combined into
-the CLVs and their adjoints. The trajectory and the linearised equations are integrated with
-[Flows.jl](https://github.com/Davide-Lasagna-s-Lab/Flows.jl). The method needs only the action of
-the tangent and of the adjoint equations on vectors. The package is therefore suited to the large
-systems that arise from the discretisation of partial differential equations.
+the CLVs and their adjoints. The growth rates of the CLVs over the window, whose means are the
+Lyapunov exponents, follow at no further cost. The trajectory and the linearised equations are
+integrated with [Flows.jl](https://github.com/Davide-Lasagna-s-Lab/Flows.jl). The method needs only
+the action of the tangent and of the adjoint equations on vectors. The package is therefore suited
+to the large systems that arise from the discretisation of partial differential equations.
 
 The CLVs are the directions that the linearised dynamics maps onto themselves, each growing or
 decaying at the rate of one Lyapunov exponent. They span the unstable, neutral and stable subspaces
@@ -397,6 +398,56 @@ $\theta_1$, normal to the span, has length $1/c_1$. As $\gamma_1$ approaches the
 vanishes and $\theta_1$ grows without bound.
 
 
+## Growth rates and Lyapunov exponents
+
+The growth factor of each CLV between two samples follows from quantities that the calculation
+already holds. Let $t_i$ and $t_{i+1}$ be the times of two consecutive samples. The tangent set,
+orthonormal at $t_i$, is marched to $t_{i+1}$ and orthonormalised again by the Gram–Schmidt
+procedure, which is a QR factorisation,
+
+```math
+Y(t_{i+1}, t_i) \Psi^-(t_i) = \Psi^-(t_{i+1}) R ,
+```
+
+with $R$ upper triangular. Its diagonal entry $R_{jj}$ is the length of the tangent vector $j$
+before its normalisation. Let $a_j(t)$ be the column $j$ of the matrix $A(t)$ of the coefficients of
+the CLVs, so that $\gamma_j = \Psi^- a_j$. The tangent flow applied to $\gamma_j(t_i)$ gives
+
+```math
+Y(t_{i+1}, t_i) \gamma_j(t_i) = \Psi^-(t_{i+1}) R a_j(t_i) .
+```
+
+By the covariance this is also $\mu_j \gamma_j(t_{i+1})$, with $\mu_j$ the growth factor
+$\mu_j(t_{i+1}, t_i)$, that is $\mu_j \Psi^-(t_{i+1}) a_j(t_{i+1})$. Hence
+
+```math
+R a_j(t_i) = \mu_j a_j(t_{i+1}) .
+```
+
+The matrices $R$ and $A$ are upper triangular, so that the entry $j$ of this equation involves their
+diagonals only,
+
+```math
+\mu_j(t_{i+1}, t_i) = R_{jj} \frac{A_{jj}(t_i)}{A_{jj}(t_{i+1})} .
+```
+
+The CLV $j$ grows as the tangent vector $j$ does, times the ratio between its coefficients on this
+vector at the two times. CLVs.jl saves the diagonal of $R$ with each sample of the tangent set, and
+returns the growth rates
+
+```math
+\lambda_j^{(i)} = \frac{\log \lvert \mu_j(t_{i+1}, t_i) \rvert}{t_{i+1} - t_i} , \qquad i = 1, \dots, K ,
+```
+
+the Lyapunov exponents of the CLVs over the $K$ sampling intervals of the window. Their mean over
+the window tends to the Lyapunov exponent $\lambda_j$ as the window grows. In the sum of the
+logarithms the coefficients at the inner samples cancel, and what is left is the sum of the
+$\log R_{jj}$, which the method of Benettin et al. (1980) averages, and a term from the two ends of
+the window. Over a single interval the two rates differ. The factor $R_{jj}$ is the growth of a
+vector that is kept orthogonal to those before it, and depends on the inner product. The factor
+$\mu_j$ is the growth of a covariant direction, and does not.
+
+
 ## The algorithm
 
 The calculation is organised around a window $[t_B, t_C]$ of length $T$, on which the vectors are
@@ -419,7 +470,8 @@ at each time.
    chunk.
 2. **Forward pass.** The trajectory is integrated and stored over the window. The tangent vectors
    are marched along it, and a copy of the orthonormal set is saved every `oneevery` time steps,
-   from $t_B$ to $t_C = t_B + T$.
+   from $t_B$ to $t_C = t_B + T$, with the lengths of the vectors before their normalisation, the
+   diagonal of $R$.
 3. **Checkpoints.** The trajectory continues from $t_C$ for the length of the second spin-up, and
    the state at the start of each of its `Nsplits` chunks is saved.
 4. **Backward spin-up.** The $N$ adjoint vectors, random at $t_C + t_{\mathrm{spin}}$, are marched
@@ -431,6 +483,7 @@ at each time.
    factors are inverted. Since $U^{-1}$ and $L^{-\top}$ are upper triangular, the vector $j$ of each
    family needs the vectors from 1 to $j$ of its set. The combinations are done in place, for
    $j = N, N-1, \dots, 1$, with $\gamma_j$ written over $\psi_j^-$ and $\theta_j$ over $\psi_j^+$.
+   The growth rates follow from the diagonals of $R$ and of the coefficients of the CLVs.
 
 At every time of the window the tangent set has been marched for at least $t_{\mathrm{spin}}$, and
 so has the adjoint set, so that both are converged over the whole window.
@@ -463,7 +516,7 @@ Julia 1.11 or later is required.
 ### The function `computeCLV`
 
 ```julia
-ts, Γs, Θs = computeCLV(flow_nl, flow_tan, flow_adj, x, randx, tspin, T, Nsplits, N, oneevery=10)
+ts, Γs, Θs, λs = computeCLV(flow_nl, flow_tan, flow_adj, x, randx, tspin, T, Nsplits, N, oneevery=10)
 ```
 
 The arguments are positional, and are listed in the following table.
@@ -481,13 +534,14 @@ The arguments are positional, and are listed in the following table.
 | `N`        | Number of vectors of each family. |
 | `oneevery` | Number of time steps between two re-orthonormalisations, and between two samples of the output. The default is 10. |
 
-The function returns three objects.
+The function returns four objects.
 
 | Output | Content |
 |--------|---------|
 | `ts`   | The $K + 1$ sample times, from 0 to `T`, measured from the start of the window. |
 | `Γs`   | `Γs[i][j]` is the CLV $\gamma_j$ at time `ts[i]`, of unit `norm`. |
 | `Θs`   | `Θs[i][j]` is the adjoint CLV $\theta_j$ at time `ts[i]`, with `dot(Θs[i][j], Γs[i][k])` equal to one for `j == k` and to zero otherwise. |
+| `λs`   | `λs[i, j]` is the growth rate of the CLV $\gamma_j$ between `ts[i]` and `ts[i+1]`, in a matrix of size $K \times N$. The means of its columns estimate the Lyapunov exponents. |
 
 `Γs` and `Θs` are vectors of `Coupled` objects of Flows.jl, each holding `N` states. The vectors are
 sorted by decreasing Lyapunov exponent. Their orientation is not defined: it follows that of the
@@ -593,8 +647,8 @@ x = flow_nl([1.0, 1.0, 20.0], (0, 20))
 # CLVs and adjoint CLVs over a window of 50 time units, sampled every 10 time
 # steps, after a spin-up of 25 time units in 5 chunks
 Random.seed!(0)
-ts, Γs, Θs = computeCLV(flow_nl, flow_tan, flow_adj, x, () -> randn(3),
-                        25.0, 50.0, 5, N, 10)
+ts, Γs, Θs, λs = computeCLV(flow_nl, flow_tan, flow_adj, x, () -> randn(3),
+                            25.0, 50.0, 5, N, 10)
 ```
 
 The window holds 1001 samples, 0.05 time units apart. The two families are dual at every sample.
@@ -663,6 +717,27 @@ length of the first adjoint CLV, the inverse of $c_1$, at the 1001 samples of th
 plane $(x, z)$. The near tangencies are on the outer loops of the two lobes of the attractor, and
 $c_1$ is below 0.1 at 7% of the samples.
 
+### Growth rates
+
+The growth rates of the three CLVs over the 1000 sampling intervals are in the matrix `λs`, and
+their means over the window estimate the Lyapunov exponents.
+
+```julia
+julia> using Statistics
+
+julia> size(λs)
+(1000, 3)
+
+julia> mean(λs; dims=1)
+1×3 Matrix{Float64}:
+ 0.854023  -0.0129411  -14.5332
+```
+
+Over the 50 time units of the window the means are close to the exponents 0.906, 0 and −14.57, which
+they approach at the slow rate of a time average. Their sum, −13.69, differs from the trace of the
+Jacobian, which is −13.67 at every state, by the term from the two ends of the window. Over a single
+sampling interval the rates fluctuate widely, that of the unstable CLV from −9.2 to 10.4.
+
 ### Projection of a perturbation
 
 The components of a perturbation on the CLVs are its inner products with the adjoint CLVs.
@@ -729,13 +804,13 @@ vector is set by the gap with the fourth exponent, which is not computed.
 
 ### Window and sampling
 
-`oneevery` sets both the interval between two re-orthonormalisations and the sampling of the output.
-Between two re-orthonormalisations the vectors of a set grow at different rates and tend to align
-with the leading one, and they must be re-orthonormalised before the ratio between the growth of the
-first and of the last approaches $10^{16}$. `T` must be a whole number of sampling intervals,
-because the tangent set is sampled counting the time steps from the start of the window and the
-adjoint set counting them from its end. Otherwise `computeCLV` throws an `ArgumentError`, after the
-forward pass.
+`oneevery` sets the interval between two re-orthonormalisations, the sampling of the output and the
+intervals of the growth rates. Between two re-orthonormalisations the vectors of a set grow at
+different rates and tend to align with the leading one, and they must be re-orthonormalised before
+the ratio between the growth of the first and of the last approaches $10^{16}$. `T` must be a whole
+number of sampling intervals, because the tangent set is sampled counting the time steps from the
+start of the window and the adjoint set counting them from its end. Otherwise `computeCLV` throws an
+`ArgumentError`, after the forward pass.
 
 <p align="center">
   <img src="assets/sampling.png" alt="Samples of the tangent and of the adjoint set in a window of three and of three and a half sampling intervals" width="820">
@@ -782,8 +857,6 @@ vectors differ by less than $10^{-9}$.
 
 ## Limitations
 
-- The Lyapunov exponents are not returned, although the re-orthonormalisations compute the growth of
-  the vectors.
 - The inner product must be real. `dot` and `norm` are used for Gram–Schmidt, for the matrix $P$ and
   for the normalisation, and the state type must also support `copy`, `similar` and broadcasting.
   The adjoint equations must be the adjoint of the tangent ones in `dot`.
@@ -802,17 +875,18 @@ The tests run `computeCLV` on two systems. The first is the fixed point of a lin
 dimension five, where the CLVs are the right eigenvectors of the matrix and the adjoint CLVs the
 left ones, the columns of the inverse transpose of the matrix of the right eigenvectors. Both
 families must match them to $10^{-8}$ and be dual to $10^{-12}$, with five vectors and with the
-first three only, in which case the adjoint CLVs must still be dual to all the five CLVs. A window
-that is not a whole number of sampling intervals must be rejected.
+first three only, in which case the adjoint CLVs must still be dual to all the five CLVs. The growth
+rates must be the eigenvalues over every sampling interval, to $10^{-8}$. A window that is not a
+whole number of sampling intervals must be rejected.
 
 The second is a chaotic trajectory of the Lorenz equations, where the vectors are not known in
 closed form. The tests check the properties that define them, with integrations that `computeCLV`
 does not use. Over each sampling interval the tangent flow must map each CLV onto its next sample,
 and the adjoint flow each adjoint CLV onto its previous sample, with the same growth factor, to
-$10^{-10}$. The two families must be dual, the neutral CLV must be the direction of the flow to the
-error of the time discretisation, and the first two vectors of each family must not depend on the
-number of vectors computed. A last test checks `angles` on three vectors of the plane. Run the tests
-with
+$10^{-10}$, and the growth rates that `computeCLV` returns must be those of this integration. The
+two families must be dual, the neutral CLV must be the direction of the flow to the error of the
+time discretisation, and the first two vectors of each family must not depend on the number of
+vectors computed. A last test checks `angles` on three vectors of the plane. Run the tests with
 
 ```
 julia --project -e 'using Pkg; Pkg.test()'

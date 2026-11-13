@@ -8,13 +8,15 @@ export computeCLV, angles
 
 """
     computeCLV(flow_nl, flow_tan, flow_adj, x, randx,
-               tspin, T, Nsplits, N, oneevery=10) -> ts, Γs, Θs
+               tspin, T, Nsplits, N, oneevery=10) -> ts, Γs, Θs, λs
 
 Compute the first `N` covariant Lyapunov vectors (CLVs) and the adjoint CLVs
 dual to them along the trajectory through `x`, over a window of length `T`
 that follows a spin-up of length `tspin`. Return the sample times `ts`,
-measured from the start of the window, the CLVs `Γs` and the adjoint CLVs
-`Θs`. `Γs[i][j]` and `Θs[i][j]` are the `j`-th vectors at time `ts[i]`.
+measured from the start of the window, the CLVs `Γs`, the adjoint CLVs `Θs`
+and the growth rates `λs` of the CLVs. `Γs[i][j]` and `Θs[i][j]` are the
+`j`-th vectors at time `ts[i]`, and `λs[i, j]` is the growth rate of the
+`j`-th CLV between `ts[i]` and `ts[i+1]`.
 
 The arguments are:
 
@@ -38,9 +40,12 @@ The arguments are:
 
 The vectors are sorted by decreasing Lyapunov exponent. The CLVs have unit
 `norm`, and the adjoint CLVs are scaled so that `dot(Θs[i][j], Γs[i][k])` is
-one for `j == k` and zero otherwise. The adjoint equations must be the adjoint
-of the tangent ones in the inner product `dot`. The time taken by each stage
-of the calculation is printed to `stdout`.
+one for `j == k` and zero otherwise. The tangent flow multiplies the `j`-th
+CLV by a factor of modulus `exp(λs[i, j]*(ts[i+1] - ts[i]))` between two
+samples, and the means of the columns of `λs` are the Lyapunov exponents.
+The adjoint equations must be the adjoint of the tangent ones in the inner
+product `dot`. The time taken by each stage of the calculation is printed to
+`stdout`.
 """
 function computeCLV(flow_nl, flow_tan, flow_adj, x::X, randx, 
                     tspin::Real, T::Real, Nsplits::Int, N::Int, oneevery::Int=10) where {X}
@@ -56,7 +61,7 @@ function computeCLV(flow_nl, flow_tan, flow_adj, x::X, randx,
     # exponents, plus perform the reorthogonalisation
     mon_tan = Monitor(ψ⁻, gs_ortho_Q!; oneevery=oneevery)
     mon_adj = Monitor(ψ⁺, gs_ortho_Q!; oneevery=oneevery)
-    mon_tan_cp = Monitor(ψ⁻, gs_ortho_Q_cp!; oneevery=oneevery);
+    mon_tan_cp = Monitor(ψ⁻, gs_ortho_QR_cp!; oneevery=oneevery);
     mon_adj_cp = Monitor(ψ⁺, gs_ortho_Q_cp!; oneevery=oneevery);
 
     # define times
@@ -135,15 +140,23 @@ function computeCLV(flow_nl, flow_tan, flow_adj, x::X, randx,
     reverse!(samples(mon_adj_cp))
 
     # turn the samples of the two sets into the CLVs and the adjoint CLVs
-    Γs, Θs = _process!(samples(mon_adj_cp), samples(mon_tan_cp))
+    Γs, Θs, D = _process!(samples(mon_adj_cp), first.(samples(mon_tan_cp)))
 
-    return times(mon_tan_cp) .- tspin, Γs, Θs
+    # Growth rates of the CLVs between two samples. Over this interval the
+    # tangent vectors grow by the factor R of their orthonormalisation, and
+    # the CLV j, whose coefficient on the tangent vector j is D[i, j] at the
+    # sample i, by the factor R[j] D[i, j] / D[i+1, j] in modulus.
+    R  = last.(samples(mon_tan_cp))
+    λs = [(log(R[i+1][j]) + log(D[i, j]) - log(D[i+1, j])) / (ts[i+1] - ts[i])
+          for i in 1:length(ts)-1, j in 1:N]
+
+    return ts .- tspin, Γs, Θs, λs
 end
 
-# re-orthogonalisation step for storage marching
-function gs_ortho_Q!(t, ψs)
+# re-orthogonalisation step for storage marching. The norms of the vectors
+# before their normalisation, the diagonal of the factor R, are written in `R`
+function gs_ortho_Q!(t, ψs, R=zeros(length(ψs)))
     N = length(ψs)
-    R = zeros(N)
     for i = 1:N
         for j = 1:i-1
             r = dot(ψs[i], ψs[j])
@@ -158,13 +171,24 @@ end
 # copying version
 gs_ortho_Q_cp!(t, ψs) = copy(gs_ortho_Q!(t, ψs))
 
+# copying version, that also returns the diagonal of the factor R
+function gs_ortho_QR_cp!(t, ψs)
+    R = zeros(length(ψs))
+    gs_ortho_Q!(t, ψs, R)
+    return copy(ψs), R
+end
+
 # Turn the Gram-Schmidt vectors of the tangent equations, `ψ⁻s`, into the CLVs,
 # and those of the adjoint equations, `ψ⁺s`, into the adjoint CLVs, in place,
 # sample by sample. With P the matrix of the inner products between the two
 # sets and P = LU its factorisation without pivoting, the CLVs are the columns
-# of ψ⁻U⁻¹ and the adjoint CLVs those of ψ⁺L⁻ᵀ.
+# of ψ⁻U⁻¹ and the adjoint CLVs those of ψ⁺L⁻ᵀ. Also return the matrix D, where
+# D[i, j] is the modulus of the coefficient of the CLV j of the sample i on
+# the tangent vector j.
 function _process!(ψ⁺s::AbstractVector{Coupled{N, T}},
                    ψ⁻s::AbstractVector{Coupled{N, T}}) where {N, T}
+    D = zeros(length(ψ⁻s), N)
+
     for i in eachindex(ψ⁺s)
         ψ⁺ = ψ⁺s[i]
         ψ⁻ = ψ⁻s[i]
@@ -192,10 +216,13 @@ function _process!(ψ⁺s::AbstractVector{Coupled{N, T}},
             a = norm(ψ⁻[j])
             ψ⁻[j] ./= a
             ψ⁺[j] .*= a
+
+            # coefficient of the CLV on the tangent vector j
+            D[i, j] = abs(A[j, j]) / a
         end
     end
 
-    return ψ⁻s, ψ⁺s
+    return ψ⁻s, ψ⁺s, D
 end
 
 

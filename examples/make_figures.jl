@@ -10,6 +10,7 @@
 using LinearAlgebra
 using Printf
 using Random
+using Statistics
 using Flows
 using CLVs
 using CairoMakie
@@ -105,7 +106,7 @@ x  = flow_nl([1.0, 1.0, 20.0], (0, 20))
 x₀ = copy(x)
 
 Random.seed!(0)
-ts, Γs, Θs = quiet() do
+ts, Γs, Θs, λs = quiet() do
     computeCLV(flow_nl, flow_tan, flow_adj, x, () -> randn(3), tspin, T, Nsplits, N, oneevery)
 end
 
@@ -123,6 +124,12 @@ println("\n\njulia> minimum(c; dims=1)")
 show(stdout, MIME"text/plain"(), minimum(c; dims=1))
 println("\n\njulia> maximum(c; dims=1)")
 show(stdout, MIME"text/plain"(), maximum(c; dims=1))
+println("\n\njulia> size(λs)")
+show(stdout, MIME"text/plain"(), size(λs))
+println("\n\njulia> mean(λs; dims=1)")
+show(stdout, MIME"text/plain"(), mean(λs; dims=1))
+println("\n\njulia> extrema(λs[:, 1])")
+show(stdout, MIME"text/plain"(), extrema(λs[:, 1]))
 
 v = [1.0, 2.0, 3.0]
 a = [dot(Θs[1][j], v) for j in 1:3]
@@ -134,6 +141,8 @@ dual = maximum(abs(dot(Θ[j], Γ[k]) - (j == k)) for (Γ, Θ) in zip(Γs, Θs), 
 α    = [angles(Γ)[j, k] for Γ in Γs, (j, k) in ((1, 2), (1, 3), (2, 3))]
 @printf "sampling interval %.3f, largest entry of ΘᵀΓ - I over the window %.1e\n" ts[2] - ts[1] dual
 @printf "smallest angles between γ₁ γ₂, γ₁ γ₃ and γ₂ γ₃: %.4f %.4f %.4f\n" minimum(α; dims=1)...
+@printf "sum of the mean growth rates %.4f, against the trace of the Jacobian %.4f\n" sum(mean(λs; dims=1)) -(10 + 1 + 8/3)
+@printf "growth rates of the neutral CLV: from %.2f to %.2f\n" extrema(λs[:, 2])...
 
 # ---- the trajectory over the window, at every time step and at the samples of the vectors ----
 store = window(flow_nl, x₀, tspin, T, Nsplits)

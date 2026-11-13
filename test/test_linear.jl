@@ -24,7 +24,7 @@
         flow_nl, flow_tan, flow_adj = flows(f, ftan, fadj, n, N, 0.01)
 
         # a window of 20 sampling intervals, after a spin-up of 80 time units
-        ts, Γs, Θs = quiet() do
+        ts, Γs, Θs, λs = quiet() do
             computeCLV(flow_nl, flow_tan, flow_adj, zeros(n), () -> randn(n),
                        80.0, 2.0, 4, N, 10)
         end
@@ -49,6 +49,11 @@
         # the two families are dual
         @test maximum(abs(dot(Θ[j], Γ[k]) - (j == k))
                       for (Γ, Θ) in zip(Γs, Θs), j in 1:N, k in 1:N) < 1e-12
+
+        # the growth rates of the CLVs are the eigenvalues, over every
+        # sampling interval, to the error of the time discretisation
+        @test size(λs) == (20, N)
+        @test maximum(abs(λs[i, j] - λ[j]) for i in 1:20, j in 1:N) < 1e-8
     end
 
     # ---- a window that is not a whole number of sampling intervals ----

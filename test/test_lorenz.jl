@@ -40,7 +40,7 @@ end
     x0 = flow_nl([1.0, 1.0, 20.0], (0, 20))
 
     # ---- the three CLVs and their adjoints ----
-    ts, Γs, Θs = quiet() do
+    ts, Γs, Θs, λs = quiet() do
         computeCLV(flow_nl, flow_tan, flow_adj, copy(x0), () -> randn(3),
                    tspin, T, Nsplits, 3, oneevery)
     end
@@ -79,12 +79,14 @@ end
     end
     @test err < 1e-4
 
-    # ---- covariance ----
+    # ---- covariance and growth rates ----
     # Over a sampling interval the tangent flow maps the CLV γ onto μγ at the
     # end of the interval, and the adjoint flow maps the adjoint CLV θ at the
-    # end onto μθ at the start, with the same factor μ.
+    # end onto μθ at the start, with the same factor μ. The growth rate that
+    # `computeCLV` returns is the logarithm of |μ| over the interval.
     errΓ = 0.0
     errΘ = 0.0
+    errλ = 0.0
     for i in 1:length(ts)-1
         v = copy(Γs[i])
         w = copy(Θs[i+1])
@@ -94,10 +96,13 @@ end
             μ    = dot(Θs[i+1][j], v[j])
             errΓ = max(errΓ, norm(v[j] .- μ .* Γs[i+1][j]) / norm(v[j]))
             errΘ = max(errΘ, norm(w[j] .- μ .* Θs[i][j]) / norm(w[j]))
+            errλ = max(errλ, abs(λs[i, j] - log(abs(μ)) / (ts[i+1] - ts[i])))
         end
     end
+    @test size(λs) == (length(ts) - 1, 3)
     @test errΓ < 1e-10
     @test errΘ < 1e-10
+    @test errλ < 1e-10
 
     # ---- truncation: the first two vectors do not depend on N ----
     flow_nl, flow_tan, flow_adj = flows(lorenz, lorenz_tan, lorenz_adj, 3, 2, Δt)
